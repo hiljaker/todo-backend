@@ -3,7 +3,7 @@ const { hash, transporter } = require("../helpers");
 const fs = require('fs');
 const handlebars = require('handlebars');
 const path = require('path');
-const { createVerificationToken } = require("../helpers/token_create");
+const { createVerificationToken, createAccessToken } = require("../helpers/token_create");
 
 module.exports = {
     signUp: async (req, res) => {
@@ -57,7 +57,7 @@ module.exports = {
             return res.status(500).send({ message: error.message })
         }
     },
-    verify: async (req, res) => {
+    verifyAccount: async (req, res) => {
         const { id } = req.user
         const msc = await connection.promise().getConnection()
         try {
@@ -72,6 +72,48 @@ module.exports = {
             return res.status(200).send(result)
         } catch (error) {
             msc.release
+            return res.status(500).send({ message: error.message })
+        }
+    },
+    logIn: async (req, res) => {
+        const { username, email, password } = req.body
+        const msc = await connection.promise().getConnection()
+        try {
+            if (!username || !email || !password) {
+                return res.status(400).send({ message: "isi semuanya" })
+            }
+            let sql = `select * from user where username = ? or email = ?`
+            let [result] = await msc.query(sql, [username, email])
+            if (!result.length) {
+                return res.status(400).send({ message: "akun tidak ditemukan" })
+            }
+            let accessTokenData = {
+                id: result[0].id,
+                username: result[0].username,
+                user_role: result[0].user_role
+            }
+            const accessToken = createAccessToken(accessTokenData)
+            res.set("access-token", accessToken)
+            msc.release()
+            return res.status(200).send(result)
+        } catch (error) {
+            msc.release()
+            return res.status(500).send({ message: error.message })
+        }
+    },
+    rememberMe: async (req, res) => {
+        const { id } = req.user
+        const msc = await connection.promise().getConnection()
+        let sql = `select * from user where id = ?`
+        try {
+            let [result] = await msc.query(sql, id)
+            if (!result.length) {
+                return res.status(400).send({ message: "akun tidak ditemukan" })
+            }
+            msc.release()
+            return res.status(200).send(result)
+        } catch (error) {
+            msc.release()
             return res.status(500).send({ message: error.message })
         }
     }

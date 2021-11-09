@@ -11,7 +11,7 @@ app.use(cors({
 }))
 app.use(bearer())
 
-app.use("/", auth_routes)
+app.use("/auth", auth_routes)
 
 app.listen(port, () => {
     console.log(`server berjalan di port ${port}`);
