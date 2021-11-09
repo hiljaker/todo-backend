@@ -79,11 +79,8 @@ module.exports = {
         const { username, email, password } = req.body
         const msc = await connection.promise().getConnection()
         try {
-            if (!username || !email || !password) {
-                return res.status(400).send({ message: "isi semuanya" })
-            }
-            let sql = `select * from user where username = ? or email = ?`
-            let [result] = await msc.query(sql, [username, email])
+            let sql = `select * from user where (username = ? or email = ?) and password = ?`
+            let [result] = await msc.query(sql, [username, email, hash(password)])
             if (!result.length) {
                 return res.status(400).send({ message: "akun tidak ditemukan" })
             }
