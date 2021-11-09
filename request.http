@@ -1,0 +1,9 @@
+### SIGN UP
+POST http://localhost:1234/signup HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "hilmo",
+    "email": "donhilmo@gmail.com",
+    "password": "kece"
+}
