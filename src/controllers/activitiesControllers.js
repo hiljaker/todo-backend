@@ -1,31 +1,33 @@
 const fs = require('fs');
-const { connection } = require('./../connections');
+const { connection: pool } = require('./../connections');
 
 exports.getActivity = async (req, res) => {
-  const { activityName } = req.params;
+  const { activity_name } = req.params;
   const { id } = req.user;
-  console.log(activityName);
 
-  const conn = await connection.promise().getConnection();
+  const conn = await pool.promise().getConnection();
   try {
-    const [results] = await conn.query('select * from activity where id = ?;', [
-      id,
-    ]);
-    const user = results;
+    let sql = 'select * from activity where user_id = ?';
 
-    res.status(200).json({ results });
+    // * get all activities if no params
+    if (activity_name === undefined) sql += ';';
+    else sql += ' and activity_name = ?;';
+
+    const [results] = await conn.query(sql, [id, activity_name]);
+
     conn.release();
+    return res.status(200).json({ results });
   } catch (error) {
     conn.release();
     console.log(error);
-    res.status(500).json({ message: error.message || 'server error' });
+    return res.status(500).json({ message: error.message || 'server error' });
   }
 };
 
 exports.addActivity = async (req, res) => {
   req.body.data = {
-    activity_name: 'nyapu2',
-    description: 'nyapu beling',
+    activity_name: 'mandi',
+    description: 'blabla',
     act_start: '2021-11-10 16:00:00',
     act_finish: '2021-11-10 16:30:00',
   };
@@ -39,21 +41,26 @@ exports.addActivity = async (req, res) => {
 
   let path = '/activities';
   let imagePath = image ? `${path}/${image[0].filename}` : null;
-  const conn = await connection.promise().getConnection();
+  const conn = await pool.promise().getConnection();
+  // const { escape } = conn; // ! this doesn't work
+  const esc = conn.escape.bind(conn); // ! bind to context of conn
   try {
-    // let sql1 = `
-    // select activity_name, act_start, act_finish
-    // from user
-    // inner join activity on user.id = user_id
-    // where (act_start < '2021-11-10 15:30:00' and '2021-11-10 15:30:00' < act_finish)
-    // or (act_start < '2021-11-10 16:40:00' and '2021-11-10 16:40:00' < act_finish)
-    // or ('2021-11-10 15:30:00' < act_start and act_finish < '2021-11-10 16:40:00')
-    // limit 1;`;
-    // const [overlaps]
-    // ! check if start-finish overlaps with any other
-    // ! parse string into datetime in sql to compare
+    // * check if there exists any datetime overlaps
+    let sql = `
+    SELECT activity_name, act_start, act_finish FROM activity
+    WHERE user_id = ${esc(id)}
+    AND((act_start <= ${esc(act_start)} AND ${esc(act_start)} < act_finish)
+    OR (act_start < ${esc(act_finish)} AND ${esc(act_finish)} <= act_finish)
+    OR (${esc(act_start)} < act_start AND act_finish < ${esc(act_finish)}));`;
+    // LIMIT 1;`;
+    const [overlaps] = await conn.query(sql);
+    // * if exist an overlap
+    if (overlaps.length) {
+      conn.release();
+      return res.status(200).json({ overlaps });
+    }
 
-    let sql = `insert into activity set ?`;
+    sql = `insert into activity set ?`;
     if (!activity_name || !description || !act_start || !act_finish) {
       if (imagePath) {
         fs.unlinkSync('./public' + imagePath);
@@ -70,14 +77,16 @@ exports.addActivity = async (req, res) => {
       user_id: id,
     };
     const [results] = await conn.query(sql, dataInsert);
-    // console.log(results);
+    // // console.log(results);
 
+    conn.release();
     return res.status(200).json({ message: 'berhasil add activity' });
   } catch (err) {
+    conn.release();
     if (imagePath) {
       fs.unlinkSync('./public' + imagePath);
     }
-    // console.log('error :', err);
+    console.log('error :', err);
     return res.status(500).json({ message: err.message });
   }
 };
