@@ -11,16 +11,7 @@ const uploadFileActivities = uploader('/activities', 'ACT').fields([
 ]);
 
 // * after verifyJWT
-router.use((req, res, next) => {
-  req.user = {
-    id: 1,
-    username: 'admin',
-    user_role: 1,
-  };
-  next();
-});
-
-router.get('/:activityName', getActivity);
+router.get('/:activity_name?', getActivity);
 router.post('/', uploadFileActivities, addActivity);
 
 module.exports = router;
