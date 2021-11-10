@@ -3,7 +3,6 @@ const app = express()
 const cors = require('cors');
 const port = 1234
 const bearer = require('express-bearer-token');
-const { auth_routes } = require('./src/routes');
 
 app.use(express.json())
 app.use(cors({
@@ -11,7 +10,9 @@ app.use(cors({
 }))
 app.use(bearer())
 
+const { auth_routes, adminRoutes } = require('./src/routes');
 app.use("/auth", auth_routes)
+app.use("/admin", adminRoutes)
 
 app.listen(port, () => {
     console.log(`server berjalan di port ${port}`);
