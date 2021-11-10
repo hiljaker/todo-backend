@@ -1,29 +1,7 @@
 const fs = require('fs');
 const { connection: pool } = require('./../connections');
 
-exports.getActivity = async (req, res) => {
-  const { activity_name } = req.params;
-  const { id } = req.user;
-
-  const conn = await pool.promise().getConnection();
-  try {
-    let sql = 'select * from activity where user_id = ?';
-
-    // * get all activities if no params
-    if (activity_name === undefined) sql += ';';
-    else sql += ' and activity_name = ?;';
-
-    const [results] = await conn.query(sql, [id, activity_name]);
-
-    conn.release();
-    return res.status(200).json({ results });
-  } catch (error) {
-    conn.release();
-    console.log(error);
-    return res.status(500).json({ message: error.message || 'server error' });
-  }
-};
-
+// ? CREATE
 exports.addActivity = async (req, res) => {
   req.body.data = {
     activity_name: 'mandi',
@@ -32,7 +10,6 @@ exports.addActivity = async (req, res) => {
     act_finish: '2021-11-10 16:30:00',
   };
   const { activity_name, description, act_start, act_finish } = req.body.data;
-
   // const { activity_name, description, act_start, act_finish } = JSON.parse(
   //   req.body.data
   // );
@@ -88,5 +65,71 @@ exports.addActivity = async (req, res) => {
     }
     console.log('error :', err);
     return res.status(500).json({ message: err.message });
+  }
+};
+
+// ? READ
+exports.getActivity = async (req, res) => {
+  const { activity_name } = req.params;
+  const { id } = req.user;
+
+  const conn = await pool.promise().getConnection();
+  try {
+    let sql = 'SELECT * FROM activity WHERE user_id = ?';
+
+    // * get all activities if no params
+    if (activity_name === undefined) sql += ';';
+    else sql += ' AND activity_name = ?;';
+
+    const [results] = await conn.query(sql, [id, activity_name]);
+
+    conn.release();
+    return res.status(200).json({ results });
+  } catch (error) {
+    conn.release();
+    console.log(error);
+    return res.status(500).json({ message: error.message || 'server error' });
+  }
+};
+
+// ? UPDATE
+exports.editActivity = async (req, res) => {
+  const { id } = req.user;
+  const conn = await pool.promise().getConnection();
+  try {
+    conn.release();
+    return res.status(200).json({ results });
+  } catch (error) {
+    conn.release();
+    console.log(error);
+    return res.status(500).json({ message: error.message || 'server error' });
+  }
+};
+
+// ? DELETE
+exports.deleteActivity = async (req, res) => {
+  // * activity_name assumed to be unique in the database
+  const { activity_name } = req.params;
+  const { id } = req.user;
+
+  const conn = await pool.promise().getConnection();
+  try {
+    let sql = 'DELETE FROM activity WHERE user_id = ? AND activity_name = ?;';
+    const [results] = await conn.query(sql, [id, activity_name]);
+
+    conn.release();
+    if (results?.affectedRows) {
+      return res
+        .status(200)
+        .json({ results: { deleted: results.affectedRows } });
+    } else {
+      return res
+        .status(400)
+        .json({ message: `no activity named '${activity_name}'` });
+    }
+  } catch (error) {
+    conn.release();
+    console.log(error);
+    return res.status(500).json({ message: error.message || 'server error' });
   }
 };
