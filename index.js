@@ -1,20 +1,22 @@
-//? third-party
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-
 const app = express();
+const cors = require('cors');
+const port = 1234;
+const bearer = require('express-bearer-token');
 
 app.use(express.json());
+app.use(
+  cors({
+    exposedHeaders: ['verification-token'],
+  })
+);
+app.use(bearer());
 
-app.use(cors());
+const { auth_routes, adminRoutes, activitiesRoutes } = require('./src/routes');
+app.use('/auth', auth_routes);
+app.use('/admin', adminRoutes);
+app.use('/activities', activitiesRoutes);
 
-//! routes
-app.use('/activities', require('./src/routes/activitiesRoutes')); // * use verify jwt middleware
-
-app.all('*', (req, res) => res.status(404).json({ message: 'not found' }));
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`running on: http://localhost:${PORT}`);
+app.listen(port, () => {
+  console.log(`server berjalan di port ${port}`);
 });

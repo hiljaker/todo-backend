@@ -1,12 +1,12 @@
 const fs = require('fs');
-const pool = require('./../connections/db');
+const { connection } = require('./../connections');
 
 exports.getActivity = async (req, res) => {
   const { activityName } = req.params;
   const { id } = req.user;
   console.log(activityName);
 
-  const conn = await pool.promise().getConnection();
+  const conn = await connection.promise().getConnection();
   try {
     const [results] = await conn.query('select * from activity where id = ?;', [
       id,
@@ -39,16 +39,16 @@ exports.addActivity = async (req, res) => {
 
   let path = '/activities';
   let imagePath = image ? `${path}/${image[0].filename}` : null;
-  const conn = await pool.promise().getConnection();
+  const conn = await connection.promise().getConnection();
   try {
-    let sql1 = `
-    select activity_name, act_start, act_finish
-    from user 
-    inner join activity on user.id = user_id
-    where (act_start < '2021-11-10 15:30:00' and '2021-11-10 15:30:00' < act_finish)
-    or (act_start < '2021-11-10 16:40:00' and '2021-11-10 16:40:00' < act_finish)
-    or ('2021-11-10 15:30:00' < act_start and act_finish < '2021-11-10 16:40:00')
-    limit 1;`;
+    // let sql1 = `
+    // select activity_name, act_start, act_finish
+    // from user
+    // inner join activity on user.id = user_id
+    // where (act_start < '2021-11-10 15:30:00' and '2021-11-10 15:30:00' < act_finish)
+    // or (act_start < '2021-11-10 16:40:00' and '2021-11-10 16:40:00' < act_finish)
+    // or ('2021-11-10 15:30:00' < act_start and act_finish < '2021-11-10 16:40:00')
+    // limit 1;`;
     // const [overlaps]
     // ! check if start-finish overlaps with any other
     // ! parse string into datetime in sql to compare
