@@ -1,29 +1,7 @@
 const fs = require('fs');
 const { connection: pool } = require('./../connections');
 
-exports.getActivity = async (req, res) => {
-  const { activity_name } = req.params;
-  const { id } = req.user;
-
-  const conn = await pool.promise().getConnection();
-  try {
-    let sql = 'select * from activity where user_id = ?';
-
-    // * get all activities if no params
-    if (activity_name === undefined) sql += ';';
-    else sql += ' and activity_name = ?;';
-
-    const [results] = await conn.query(sql, [id, activity_name]);
-
-    conn.release();
-    return res.status(200).json({ results });
-  } catch (error) {
-    conn.release();
-    console.log(error);
-    return res.status(500).json({ message: error.message || 'server error' });
-  }
-};
-
+// ? CREATE
 exports.addActivity = async (req, res) => {
   req.body.data = {
     activity_name: 'mandi',
@@ -88,5 +66,57 @@ exports.addActivity = async (req, res) => {
     }
     console.log('error :', err);
     return res.status(500).json({ message: err.message });
+  }
+};
+
+// ? read
+exports.getActivity = async (req, res) => {
+  const { activity_name } = req.params;
+  const { id } = req.user;
+
+  const conn = await pool.promise().getConnection();
+  try {
+    let sql = 'select * from activity where user_id = ?';
+
+    // * get all activities if no params
+    if (activity_name === undefined) sql += ';';
+    else sql += ' and activity_name = ?;';
+
+    const [results] = await conn.query(sql, [id, activity_name]);
+
+    conn.release();
+    return res.status(200).json({ results });
+  } catch (error) {
+    conn.release();
+    console.log(error);
+    return res.status(500).json({ message: error.message || 'server error' });
+  }
+};
+
+// ? UPDATE
+exports.editActivity = async (req, res) => {
+  const { id } = req.user;
+  const conn = await pool.promise().getConnection();
+  try {
+    conn.release();
+    return res.status(200).json({ results });
+  } catch (error) {
+    conn.release();
+    console.log(error);
+    return res.status(500).json({ message: error.message || 'server error' });
+  }
+};
+
+// ? DELETE
+exports.deleteActivity = async (req, res) => {
+  const { id } = req.user;
+  const conn = await pool.promise().getConnection();
+  try {
+    conn.release();
+    return res.status(200).json({ results });
+  } catch (error) {
+    conn.release();
+    console.log(error);
+    return res.status(500).json({ message: error.message || 'server error' });
   }
 };
