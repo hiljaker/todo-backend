@@ -1,10 +1,10 @@
-const {mysqldb} = require("../connections")
+const {connection} = require("../connections")
 
 module.exports = {
     activateAcc: async(req,res) => {
         console.log(req.body)
         const { userId, username } = req.params
-        const conn = await mysqldb.promise().getConnection()
+        const conn = await connection.promise().getConnection()
         if (!username || !userId){
             return res.status(400).send({message : "user belum login"})
         }
@@ -26,7 +26,7 @@ module.exports = {
     deactivateAcc : async(req,res) => {
         console.log(req.body)
         const { userId, username } = req.params
-        const conn = await mysqldb.promise().getConnection()
+        const conn = await connection.promise().getConnection()
         if (!username || !userId){
             return res.status(400).send({message : "user belum login"})
         }
