@@ -3,16 +3,9 @@ const { connection: pool } = require('./../connections');
 
 // ? CREATE
 exports.addActivity = async (req, res) => {
-  req.body.data = {
-    activity_name: 'mandi',
-    description: 'blabla',
-    act_start: '2021-11-10 16:00:00',
-    act_finish: '2021-11-10 16:30:00',
-  };
-  const { activity_name, description, act_start, act_finish } = req.body.data;
-  // const { activity_name, description, act_start, act_finish } = JSON.parse(
-  //   req.body.data
-  // );
+  const { activity_name, description, act_start, act_finish } = JSON.parse(
+    req.body.data
+  );
   const { image } = req.files;
   const { id } = req.user;
 
@@ -34,6 +27,9 @@ exports.addActivity = async (req, res) => {
     // * if exist an overlap
     if (overlaps.length) {
       conn.release();
+      if (imagePath) {
+        fs.unlinkSync('./public' + imagePath);
+      }
       return res.status(200).json({ overlaps });
     }
 
@@ -42,7 +38,7 @@ exports.addActivity = async (req, res) => {
       if (imagePath) {
         fs.unlinkSync('./public' + imagePath);
       }
-      return res.status(400).json({ message: 'kurang input data' });
+      return res.status(400).json({ message: 'incomplete input data' });
     }
 
     let dataInsert = {
@@ -57,7 +53,7 @@ exports.addActivity = async (req, res) => {
     // // console.log(results);
 
     conn.release();
-    return res.status(200).json({ message: 'berhasil add activity' });
+    return res.status(200).json({ message: 'successfully added new activity' });
   } catch (err) {
     conn.release();
     if (imagePath) {
@@ -70,18 +66,19 @@ exports.addActivity = async (req, res) => {
 
 // ? READ
 exports.getActivity = async (req, res) => {
-  const { activity_name } = req.params;
-  const { id } = req.user;
+  const { id } = req.params;
+  const user_id = req.user.id;
 
   const conn = await pool.promise().getConnection();
   try {
-    let sql = 'SELECT * FROM activity WHERE user_id = ?';
+    let sql =
+      'SELECT id, activity_name, image, description, act_start, act_finish FROM activity WHERE user_id = ?';
 
-    // * get all activities if no params
-    if (activity_name === undefined) sql += ';';
-    else sql += ' AND activity_name = ?;';
+    // * get all activities if id param is not set
+    if (id === undefined) sql += ';';
+    else sql += ' AND id = ?;';
 
-    const [results] = await conn.query(sql, [id, activity_name]);
+    const [results] = await conn.query(sql, [user_id, id]);
 
     conn.release();
     return res.status(200).json({ results });
@@ -94,9 +91,18 @@ exports.getActivity = async (req, res) => {
 
 // ? UPDATE
 exports.editActivity = async (req, res) => {
+  const data = JSON.parse(req.body.data);
+  const { image } = req.files;
   const { id } = req.user;
+
+  let path = '/activities';
+  let imagePath = image ? `${path}/${image[0].filename}` : null;
+
   const conn = await pool.promise().getConnection();
   try {
+    let sql = 'UPDATE activity SET';
+    const [results] = await conn.query(sql);
+
     conn.release();
     return res.status(200).json({ results });
   } catch (error) {
@@ -109,23 +115,35 @@ exports.editActivity = async (req, res) => {
 // ? DELETE
 exports.deleteActivity = async (req, res) => {
   // * activity_name assumed to be unique in the database
-  const { activity_name } = req.params;
-  const { id } = req.user;
+  const { id } = req.params;
+  const user_id = req.user.id;
 
   const conn = await pool.promise().getConnection();
   try {
-    let sql = 'DELETE FROM activity WHERE user_id = ? AND activity_name = ?;';
-    const [results] = await conn.query(sql, [id, activity_name]);
+    let sql = 'SELECT id, image FROM activity WHERE user_id = ? AND id = ?';
+    const [data] = await conn.query(sql, [user_id, id]);
+    // * if data exists
+    if (data.length) {
+      // * delete from database
+      sql = 'DELETE FROM activity WHERE id = ?;';
+      const [results] = await conn.query(sql, [data[0].id]);
+      // * if delete from database is successful
+      if (results.affectedRows) {
+        // * delete image from public
+        if (data[0].image) {
+          if (fs.existsSync('./public' + data[0].image)) {
+            fs.unlinkSync('./public' + data[0].image);
+          }
+        }
+      }
 
-    conn.release();
-    if (results?.affectedRows) {
-      return res
-        .status(200)
-        .json({ results: { deleted: results.affectedRows } });
+      conn.release();
+      return res.status(200).json({
+        results: { message: `successfully deleted activity with id: ${id}` },
+      });
     } else {
-      return res
-        .status(400)
-        .json({ message: `no activity named '${activity_name}'` });
+      conn.release();
+      return res.status(400).json({ message: `no activity with id: ${id}` });
     }
   } catch (error) {
     conn.release();
