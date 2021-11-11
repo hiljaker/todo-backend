@@ -30,7 +30,7 @@ exports.addActivity = async (req, res) => {
       if (imagePath) {
         fs.unlinkSync('./public' + imagePath);
       }
-      return res.status(200).json({ overlaps });
+      return res.status(400).json({ overlaps });
     }
 
     sql = `insert into activity set ?`;
@@ -54,13 +54,13 @@ exports.addActivity = async (req, res) => {
 
     conn.release();
     return res.status(200).json({ message: 'successfully added new activity' });
-  } catch (err) {
+  } catch (error) {
     conn.release();
     if (imagePath) {
       fs.unlinkSync('./public' + imagePath);
     }
-    console.log('error :', err);
-    return res.status(500).json({ message: err.message });
+    // console.log(error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -84,30 +84,81 @@ exports.getActivity = async (req, res) => {
     return res.status(200).json({ results });
   } catch (error) {
     conn.release();
-    console.log(error);
+    // console.log(error);
     return res.status(500).json({ message: error.message || 'server error' });
   }
 };
 
 // ? UPDATE
 exports.editActivity = async (req, res) => {
-  const data = JSON.parse(req.body.data);
+  const newData = JSON.parse(req.body.data);
   const { image } = req.files;
-  const { id } = req.user;
+  const { id, act_start, act_finish } = newData;
+  const user_id = req.user.id;
 
   let path = '/activities';
   let imagePath = image ? `${path}/${image[0].filename}` : null;
 
   const conn = await pool.promise().getConnection();
+  const esc = conn.escape.bind(conn);
   try {
-    let sql = 'UPDATE activity SET';
-    const [results] = await conn.query(sql);
+    if (act_start || act_finish) {
+      // * check if there exists any datetime overlaps with activities other than this one
+      const sql = `
+      SELECT id, activity_name, act_start, act_finish FROM activity
+      WHERE user_id = ${esc(user_id)}
+      AND (id <> ${esc(id)})
+      AND((act_start <= ${esc(act_start)} AND ${esc(act_start)} < act_finish)
+      OR (act_start < ${esc(act_finish)} AND ${esc(act_finish)} <= act_finish)
+      OR (${esc(act_start)} < act_start AND act_finish < ${esc(act_finish)}));`;
+      // LIMIT 1;`;
+      const [overlaps] = await conn.query(sql);
+      // * if exist an overlap
+      if (overlaps.length) {
+        conn.release();
+        if (imagePath) {
+          fs.unlinkSync('./public' + imagePath);
+        }
+        return res.status(400).json({ overlaps });
+      }
+    }
+
+    let sql = `SELECT id, image FROM activity WHERE user_id = ? AND id = ?;`;
+    let [oldData] = await conn.query(sql, [user_id, id]);
+    if (!oldData.length) {
+      conn.release();
+      if (imagePath) {
+        fs.unlinkSync('./public' + imagePath);
+      }
+      return res.status(400).json({ message: `no activity with id: ${id}` });
+    }
+
+    sql = `UPDATE activity SET ? WHERE id = ?`;
+    let dataUpdate = {
+      ...newData,
+    };
+    if (imagePath) {
+      dataUpdate.image = imagePath;
+    }
+    const [results] = await conn.query(sql, [dataUpdate, id]);
+    // * if update on database is successful
+    if (results.affectedRows) {
+      // * delete old image from public
+      if (imagePath && oldData[0].image) {
+        fs.unlinkSync('./public' + oldData[0].image);
+      }
+    }
 
     conn.release();
-    return res.status(200).json({ results });
+    return res.status(200).json({
+      message: `successfully edited activity with id: ${id}`,
+    });
   } catch (error) {
     conn.release();
-    console.log(error);
+    if (imagePath) {
+      fs.unlinkSync('./public' + imagePath);
+    }
+    // console.log(error);
     return res.status(500).json({ message: error.message || 'server error' });
   }
 };
@@ -139,7 +190,7 @@ exports.deleteActivity = async (req, res) => {
 
       conn.release();
       return res.status(200).json({
-        results: { message: `successfully deleted activity with id: ${id}` },
+        message: `successfully deleted activity with id: ${id}`,
       });
     } else {
       conn.release();
@@ -147,7 +198,7 @@ exports.deleteActivity = async (req, res) => {
     }
   } catch (error) {
     conn.release();
-    console.log(error);
+    // console.log(error);
     return res.status(500).json({ message: error.message || 'server error' });
   }
 };
