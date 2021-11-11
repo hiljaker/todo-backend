@@ -1,4 +1,5 @@
 const {connection} = require("../connections")
+// pushulang
 
 module.exports = {
     activateAcc: async(req,res) => {
