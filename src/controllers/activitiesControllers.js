@@ -9,7 +9,7 @@ exports.addActivity = async (req, res) => {
   const { image } = req.files;
   const { id } = req.user;
 
-  let path = '/activities';
+  let path = '/images/activities';
   let imagePath = image ? `${path}/${image[0].filename}` : null;
   const conn = await pool.promise().getConnection();
   // const { escape } = conn; // ! this doesn't work
@@ -96,7 +96,7 @@ exports.editActivity = async (req, res) => {
   const { id, act_start, act_finish } = newData;
   const user_id = req.user.id;
 
-  let path = '/activities';
+  let path = '/images/activities';
   let imagePath = image ? `${path}/${image[0].filename}` : null;
 
   const conn = await pool.promise().getConnection();

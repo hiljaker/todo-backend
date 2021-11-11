@@ -15,6 +15,9 @@ app.use(
 );
 app.use(bearer());
 
+// ! routes
+app.use(express.static('public')); // * serve static files
+
 const { auth_routes, adminRoutes, activitiesRoutes } = require('./src/routes');
 app.use('/auth', auth_routes);
 app.use('/admin', adminRoutes);

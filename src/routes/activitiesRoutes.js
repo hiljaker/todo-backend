@@ -8,7 +8,7 @@ const {
   deleteActivity,
 } = require('./../controllers/activitiesControllers');
 
-const uploadFileActivities = uploader('/activities', 'ACT').fields([
+const uploadFileActivities = uploader('/images/activities', 'ACT').fields([
   { name: 'image', maxCount: 3 },
 ]);
 
