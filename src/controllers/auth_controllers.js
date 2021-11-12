@@ -13,8 +13,9 @@ module.exports = {
             // Cek apakah akun telah terdaftar atau belum
             let sql = `select * from user where username = ? or email = ?`
             let [cekAkun] = await msc.query(sql, [username, email])
+            console.log(cekAkun);
             if (cekAkun.length) {
-                return res.status(400).send({ message: "username atau email telah terdaftar" })
+                throw cekAkun
             }
             // Jika tidak ada akun dengan username atau email yang diinput
             // Daftarkan akun
@@ -45,16 +46,16 @@ module.exports = {
                 token: verificationToken
             })
             await transporter.sendMail({
-                from: "To Do <hilmawanzaky57@gmail.com>",
-                to: "hilmawanzaky57@gmail.com",
-                subject: "email verifikasiiii",
+                from: "To Do Keren",
+                to: result[0].email,
+                subject: "ning nong email verifikasiiii",
                 html: htmlToEmail
             })
             msc.release()
             return res.status(200).send(result)
         } catch (error) {
             msc.release()
-            return res.status(500).send({ message: error.message })
+            return res.send(error)
         }
     },
     verifyAccount: async (req, res) => {
@@ -67,9 +68,9 @@ module.exports = {
             }
             await msc.query(sql, [verified, id])
             sql = `select * from user where id = ?`
-            let [result] = await msc.query(sql, id)
+            await msc.query(sql, id)
             msc.release()
-            return res.status(200).send(result)
+            return res.status(200).sendFile(path.join(__dirname, "../templates/backtologin.html"))
         } catch (error) {
             msc.release
             return res.status(500).send({ message: error.message })
@@ -82,7 +83,7 @@ module.exports = {
             let sql = `select * from user where (username = ? or email = ?) and password = ?`
             let [result] = await msc.query(sql, [username, email, hash(password)])
             if (!result.length) {
-                return res.status(400).send({ message: "akun tidak ditemukan" })
+                throw []
             }
             let accessTokenData = {
                 id: result[0].id,
@@ -95,7 +96,7 @@ module.exports = {
             return res.status(200).send(result)
         } catch (error) {
             msc.release()
-            return res.status(500).send({ message: error.message })
+            return res.send(error)
         }
     },
     rememberMe: async (req, res) => {
@@ -109,6 +110,19 @@ module.exports = {
             }
             msc.release()
             return res.status(200).send(result)
+        } catch (error) {
+            msc.release()
+            return res.status(500).send({ message: error.message })
+        }
+    },
+    isRegistered: async (req, res) => {
+        const { username, email } = req.body
+        const msc = await connection.promise().getConnection()
+        try {
+            let sql = `select * from user where username = ? or email = ?`
+            let [check] = await msc.query(sql, [username, email])
+            msc.release()
+            return res.status(200).send(check)
         } catch (error) {
             msc.release()
             return res.status(500).send({ message: error.message })
