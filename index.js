@@ -10,7 +10,7 @@ const { verifyAccessToken } = require('./src/helpers/token_verify');
 app.use(express.json());
 app.use(
   cors({
-    exposedHeaders: ['access-token'],
+    exposedHeaders: ['access-token', "x-total-count"],
   })
 );
 app.use(bearer());
